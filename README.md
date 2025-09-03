@@ -8,6 +8,18 @@ The grammar is available in [docs/PL-0 Grammar.txt](docs/PL-0%20Grammar.txt). As
 
 The [example](examples/mdgdc.pl0) PL0 program is from the same book, Chapter 5, Page 310-311.
 
+The .p files are textual representations of the algorithms as presented in the book, and the .pas files are the conversions to Free Pascal code, including changing some symbols to ASCII alternatives, adding some minor changes, printing of debugging information, etc.
+
 There are three increasingly refined version of the parser:
 
 - The first one [pl054/PL054.p](pl054/PL054.p) is just a simple validator.
+- Work in progress
+- Work in progress
+
+To compile the examples:
+
+ `fpc .\pl054\PL054u.pas`
+  
+And to run the examples:
+
+`.\pl054\PL054u.exe .\examples\mdgdc.pl0`

@@ -253,12 +253,12 @@ end {block} ;
 
 begin {main program}
 	 for ch := 'A' to ';' do ssym[ch] := nul;
-	 word[ 1] := 'BEGIN';		word[ 2] := 'CALL     ';
-	 word[ 3] := 'CONST';		word[ 4] := 'DO       ';
-	 word[ 5] := 'END  ';		word[ 6] := 'IF       ';
-	 word[ 7] := 'ODD  ';		word[ 8] := 'PROCEDURE';
-	 word[ 9] := 'THEN ';		word[10] := 'VAR      ';
-	 word[11] := 'WHILE';
+	 word[ 1] := 'BEGIN     ';		word[ 2] := 'CALL      ';
+	 word[ 3] := 'CONST     ';		word[ 4] := 'DO        ';
+	 word[ 5] := 'END       ';		word[ 6] := 'IF        ';
+	 word[ 7] := 'ODD       ';		word[ 8] := 'PROCEDURE ';
+	 word[ 9] := 'THEN      ';		word[10] := 'VAR       ';
+	 word[11] := 'WHILE     ';
 	 wsym[ 1] := beginsym;		wsym[ 2] := callsym;
 	 wsym[ 3] := constsym;		wsym[ 4] := dosym;
 	 wsym[ 5] := endsym;		wsym[ 6] := ifsym;

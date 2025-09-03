@@ -54,8 +54,8 @@ var ch: char;     {last character read}
 procedure cleanExit;
 begin
     writeln;
-    Close(inputFile);
-    exit
+    close(inputFile);
+    halt
 end {cleanExit} ;
 
 procedure error (n: integer);
@@ -111,19 +111,19 @@ procedure getsym;
             begin
                 ll := ll + 1;
                 read(inputFile, ch);
-                write(ch);
+                //write(ch);
                 line[ll] := ch
             end;
             writeln;
             ll := ll + 1;
-            read(line[ll])
+            read(inputFile, line[ll])
         end;
         cc := cc + 1;
         ch := line[cc]
     end {getch};
 
 begin {getsym}
-    while ch = ' ' do
+    while (ch = ' ') or (ch = chr(10)) or (ch = chr(13)) do
         getch;
     if ch in ['A'..'Z'] then
     begin {identifier or reserved word}
@@ -188,7 +188,14 @@ begin {getsym}
         sym := ssym[ch];
         getch
     end;
-    {writeln(sym);} // debug
+    // Following output is added for debugging
+    write(sym, ' ');
+    if sym = ident then
+        writeln(id)
+    else if sym = number then
+        writeln(num)
+    else
+        writeln
 end {getsym} ;
 
 procedure block (tx: integer);
@@ -461,17 +468,17 @@ begin {main program}
     writeln('Processing file: ', fileName);
     for ch := 'A' to ';' do
         ssym[ch] := nul;
-    word[ 1] := 'BEGIN';
-    word[ 2] := 'CALL';
-    word[ 3] := 'CONST';
-    word[ 4] := 'DO';
-    word[ 5] := 'END';
-    word[ 6] := 'IF';
-    word[ 7] := 'ODD';
-    word[ 8] := 'PROCEDURE';
-    word[ 9] := 'THEN';
-    word[10] := 'VAR';
-    word[11] := 'WHILE';
+    word[ 1] := 'BEGIN     ';
+    word[ 2] := 'CALL      ';
+    word[ 3] := 'CONST     ';
+    word[ 4] := 'DO        ';
+    word[ 5] := 'END       ';
+    word[ 6] := 'IF        ';
+    word[ 7] := 'ODD       ';
+    word[ 8] := 'PROCEDURE ';
+    word[ 9] := 'THEN      ';
+    word[10] := 'VAR       ';
+    word[11] := 'WHILE     ';
     wsym[ 1] := beginsym;
     wsym[ 2] := callsym;
     wsym[ 3] := constsym;
