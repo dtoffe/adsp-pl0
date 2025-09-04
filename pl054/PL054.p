@@ -1,5 +1,5 @@
 {
-From the book Algorithms + Data Structures = Programs, by Nicklaus Wirth (1976)
+From the book Algorithms + Data Structures = Programs, by Niklaus Wirth (1976)
 
 Chapter 5, page 314
 
