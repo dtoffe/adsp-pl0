@@ -1,9 +1,9 @@
 {
 From the book Algorithms + Data Structures = Programs, by Niklaus Wirth (1976)
 
-Chapter 5, page 314
+Chapter 5, page 326
 
-Program 5.4 PL/O Parser
+Program 5.5 PL/O Parser with Error Recovery
 
 OCRed, cleaned, fixed, formatted, converted to modern Free Pascal
 and tested by Daniel Toffetti.
@@ -13,13 +13,13 @@ Formatted with PTop (https://wiki.freepascal.org/PTop)
 {$modeSwitch nonlocalgoto+}
 
 program PLO {(input, output)};
-{PL/0 compiler, syntax analysis only}
+{PL/0 compiler with syntax error recovery}
 
 {label 99;}
 
 const norw = 11;  {no. of reserved words}
-    txmax = 100;  {length of indentifier table}
-    nmax = 14;    {max. no of digits in numbers}
+    txmax = 100;  {length of identifier table}
+    nmax = 14;    {max. no. of digits in numbers}
     al = 10;      {length of identifiers}
 
 type symbol =
@@ -29,6 +29,7 @@ type symbol =
         whilesym, dosym, callsym, constsym, varsym, procsym);
     alfa = packed array [1..al] of char;
     objkind = (constant, variable, proc);
+    symset = set of symbol;
 
 var ch: char;     {last character read}
     sym: symbol;  {last symbol read}
@@ -42,7 +43,8 @@ var ch: char;     {last character read}
     word: array [1..norw] of alfa;
     wsym: array [1..norw] of symbol;
     ssym: array [char] of symbol;
-    table: array [0..txmax] of 
+    declbegsys, statbegsys, facbegsys: symset;
+    table: array [0..txmax] of
               record
                   name: alfa;
                   kind: objkind
@@ -89,7 +91,7 @@ begin
         30: writeln (' This number is too large.');
     end;
     cleanExit() { goto 99 }
-end {error};
+end {error} ;
 
 procedure getsym;
 
@@ -198,21 +200,32 @@ begin {getsym}
         writeln
 end {getsym} ;
 
-procedure block (tx: integer);
+procedure test (s1, s2: symset; n: integer);
+begin
+    if not (sym in s1) then
+    begin
+        error(n);
+        s1 := s1 + s2;
+        while not (sym in s1) do
+            getsym
+    end
+end {test} ;
+
+procedure block (tx: integer; fsys: symset);
 
     procedure enter (k: objkind);
-    begin {enter objkind into table}
+    begin {enter object into table}
         tx := tx + 1;
         with table[tx] do
         begin
             name := id;
             kind := k;
-        end
+        end;
     end {enter} ;
 
     function position (id: alfa): integer;
         var i: integer;
-    begin { find identifier id in table}
+    begin {find identifier id in table}
         table[0].name := id;
         i := tx;
         while table[i].name <> id do
@@ -225,114 +238,122 @@ procedure block (tx: integer);
         if sym = ident then
         begin
             getsym;
-            if sym = eql then
+            if sym in [eql, becomes] then
             begin
+                if sym = becomes then
+                    error (1);
                 getsym;
                 if sym = number then
                 begin
-                    enter(constant);
+                    enter (constant);
                     getsym
                 end
                 else
-                    error(2)
+                    error (2)
             end
             else
-                error(3)
+                error (3)
         end
         else
-            error(4)
+            error (4)
     end {constdeclaration} ;
 
     procedure vardeclaration;
     begin
         if sym = ident then
         begin
-            enter(variable);
+            enter (variable);
             getsym
         end
         else
-            error(4)
+            error (4)
     end {vardeclaration} ;
 
-    procedure statement;
+    procedure statement (fsys: symset);
         var i: integer;
 
-        procedure expression;
+        procedure expression (fsys: symset);
 
-            procedure term;
+            procedure term (fsys: symset);
 
-                procedure factor;
+                procedure factor (fsys: symset);
                     var i: integer;
+
                 begin
-                    if sym = ident then
+                    test (facbegsys, fsys, 24);
+                    while sym in facbegsys do
                     begin
-                        i := position(id);
-                        if i = 0 then
-                            error (11)
-                        else
-                            if table[i].kind = proc then
-                                error (21);
-                        getsym
-                    end
-                    else
-                    if sym = number then
-                    begin
-                        getsym
-                    end
-                    else
-                    if sym = lparen then
-                    begin
-                        getsym;
-                        expression;
-                        if sym = rparen then
+                        if sym = ident then
+                        begin
+                            i := position (id);
+                            if i = 0 then
+                                error (11)
+                            else
+                                if table[i].kind = proc then
+                                    error (21);
                             getsym
+                        end
                         else
-                            error (22)
+                            if sym = number then
+                            begin
+                                getsym
+                            end
+                            else
+                                if sym = lparen then
+                                begin
+                                    getsym;
+                                    expression ([rparen]+fsys);
+                                // end
+                                // else
+                                    if sym = rparen then
+                                        getsym
+                                    else
+                                        error (22)
+                        end ;
+                        test(fsys, [lparen], 23)
                     end
-                    else
-                        error (23)
                 end { factor} ;
 
             begin {term}
-                factor;
+                factor (fsys+[times, slash]);
                 while sym in [times, slash] do
                 begin
                     getsym;
-                    factor
+                    factor(fsys+[times, slash])
                 end
             end {term} ;
 
         begin {expression}
-            if sym in [ plus, minus] then
+            if sym in [plus, minus] then
             begin
                 getsym;
-                term
+                term(fsys+[plus, minus])
             end
             else
-                term;
-            while sym in [ plus, minus] do
+                term(fsys+[plus, minus]);
+            while sym in [plus, minus] do
             begin
                 getsym;
-                term
+                term(fsys+[plus, minus])
             end
         end {expression} ;
 
-        procedure condition;
+        procedure condition (fsys: symset);
         begin
             if sym = oddsym then
             begin
                 getsym;
-                expression
+                expression(fsys);
             end
             else
             begin
-                expression;
+                expression ([eql, neq, lss, gtr, leq, geq]+fsys);
                 if not (sym in [eql, neq, lss, leq, gtr, geq]) then
                     error (20)
                 else
                 begin
                     getsym;
-                    expression
+                    expression (fsys)
                 end
             end
         end {condition} ;
@@ -344,121 +365,130 @@ procedure block (tx: integer);
             if i = 0 then
                 error (11)
             else
-                if table [i] .kind <> variable then
+                if table[i].kind <> variable then
                     error (12);
             getsym;
             if sym = becomes then
                 getsym
             else
                 error (13);
-            expression
+            expression(fsys);
         end
         else
-        if sym = callsym then
-        begin
-          getsym;
-          if sym <> ident then
-              error (14)
-          else
-            begin
-              i := position(id);
-              if i = 0 then
-                  error (11)
-              else
-                  if table[i].kind <> proc then
-                      error (15);
-              getsym
-            end
-        end
-        else
-        if sym = ifsym then
-        begin
-            getsym;
-            condition;
-            if sym = thensym then
-                getsym
-            else
-                error (16);
-            statement;
-        end
-        else
-        if sym = beginsym then
-        begin
-            getsym;
-            statement;
-            while sym = semicolon do
+            if sym = callsym then
             begin
                 getsym;
-                statement
-            end;
-            if sym = endsym then
-                getsym
+                if sym <> ident then error (14) else
+                    begin i := position(id);
+                        if i = 0 then error (11) else
+                        if table[i].kind <> proc then error (15);
+                        getsym
+                    end
+            end
             else
-                error (17)
-        end
-        else
-        if sym = whilesym then
-        begin
-            getsym;
-            condition;
-            if sym = dosym then
-                getsym
-            else
-                error (18);
-            statement
-        end
+                if sym = ifsym then
+                begin
+                    getsym;
+                    condition ([thensym, dosym]+fsys);
+                    if sym = thensym then
+                        getsym
+                    else
+                        error (16);
+                    statement(fsys)
+                end
+                else
+                    if sym = beginsym then
+                    begin
+                        getsym;
+                        statement ([semicolon, endsym]+fsys);
+                        while sym in [semicolon]+statbegsys do
+                        begin
+                            if sym = semicolon then
+                                getsym
+                            else
+                                error (10);
+                            statement ([semicolon, endsym]+fsys)
+                        end ;
+                        if sym = endsym then
+                            getsym
+                        else
+                            error (17)
+                    end
+                    else
+                        if sym = whilesym then
+                        begin
+                            getsym;
+                            condition ([dosym]+fsys);
+                            if sym = dosym then
+                                getsym
+                            else
+                                error (18);
+                            statement(fsys);
+                        end ;
+        test(fsys, [ ], 19)
     end {statement} ;
 
 begin {block}
-    if sym = constsym then
-    begin
-        getsym;
-        constdeclaration;
-        while sym = comma do
+    repeat
+        if sym = constsym then
         begin
             getsym;
-            constdeclaration
+            repeat
+                constdeclaration;
+                while sym = comma do
+                begin
+                    getsym;
+                    constdeclaration
+                end ;
+                if sym = semicolon then
+                    getsym
+                else
+                    error (5)
+            until sym <> ident
         end ;
-        if sym = semicolon then
-            getsym
-        else
-            error (5)
-    end;
-    if sym = varsym then
-    begin
-        getsym;
-        vardeclaration;
-        while sym = comma do
+        if sym = varsym then
         begin
             getsym;
-            vardeclaration
-        end;
-        if sym = semicolon then
-            getsym
-        else
-            error (5);
-    end;
-    while sym = procsym do
-    begin
-        getsym;
-        if sym = ident then
+            repeat
+                vardeclaration;
+                while sym = comma do
+                begin
+                    getsym;
+                    vardeclaration
+                end ;
+                if sym = semicolon then
+                    getsym
+                else
+                    error (5)
+            until sym <> ident;
+        end ;
+        while sym = procsym do
         begin
-            enter (proc);
-            getsym
-        end
-        else
-            error (4);
-        if sym = semicolon then
-            getsym
-        else
-            error (5);
-        block (tx);
-        if sym = semicolon then
-            getsym
-        else
-            error (5);
-    end;
-    statement
+            getsym;
+            if sym = ident then
+            begin
+                enter (proc);
+                getsym
+            end
+            else
+                error (4);
+            if sym = semicolon then
+                getsym
+            else
+                error (5);
+            block (tx, [semicolon]+fsys);
+            if sym = semicolon then
+            begin
+                getsym;
+                test(statbegsys+[ident, procsym], fsys, 6)
+            end
+            else
+                error (5)
+        end ;
+        test (statbegsys+[ident], declbegsys, 7)
+    until not (sym in declbegsys);
+    statement([semicolon, endsym]+fsys);
+    test(fsys, [ ], 8);
 end {block} ;
 
 begin {main program}
@@ -505,16 +535,18 @@ begin {main program}
     ssym['{'] := leq;  { non ASCII "less than or equal symbol" <=, ≤ in the book }
     ssym['}'] := geq;  { non ASCII "greater than or equal symbol" >=, ≥ in the book }
     ssym[';'] := semicolon;
+    declbegsys := [constsym, varsym, procsym];
+    statbegsys := [beginsym, callsym, ifsym, whilesym];
+    facbegsys := [ident, number, lparen];
     { page(output);  standard library feature of old Pascals to clear screen }
     cc := 0;
     ll := 0;
     ch := ' ';
     kk := al;
     getsym;
-    block (0);
+    block (0, [period]+declbegsys+statbegsys);
     if sym <> period then
         error (9);
-    {99: writeln;
-    Close(inputFile)} ;
+    {99: writeln}
     cleanExit()
 end.
