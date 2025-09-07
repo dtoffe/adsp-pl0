@@ -21,7 +21,10 @@
 // "≥" replaced by "}"
 // 
 // The use of curly brackets is not a good alternative, but it is the
-// only reasonable choice that is available in the ASCII character set.
+// only reasonable choice that is available in the ASCII character set,
+// taking into account that the code assumes one symbol per character
+// except for ":=", and changing "≤" to "<=" and "≥" to ">=" involves
+// more work and greater code changes than I want to do here.
 // 
 // Note 2:
 // =======
@@ -31,6 +34,12 @@
 // the original PL/0 implementation, the compiler prints the value of
 // any variable as it changes (see https://en.wikipedia.org/wiki/PL/0).
 // However, these statements were later added in most implementations.
+//
+// Note 3:
+// =======
+// Note that the example PL0 code given in the book in Chapter 5, Page
+// 310-311 is typed in lowercase letters, while the grammar and code
+// in the parsers imply the PL0 source must be in uppercase letters.
 
 
 // Syntactical Rules:

@@ -253,29 +253,29 @@ end {block} ;
 
 begin {main program}
     for ch := 'A' to ';' do ssym[ch] := nul;
-    word[ 1] := 'BEGIN     ';	word[ 2] := 'CALL      ';
-    word[ 3] := 'CONST     ';	word[ 4] := 'DO        ';
-    word[ 5] := 'END       ';	word[ 6] := 'IF        ';
-    word[ 7] := 'ODD       ';	word[ 8] := 'PROCEDURE ';
-    word[ 9] := 'THEN      ';	word[10] := 'VAR       ';
+    word[ 1] := 'BEGIN     ';  word[ 2] := 'CALL      ';
+    word[ 3] := 'CONST     ';  word[ 4] := 'DO        ';
+    word[ 5] := 'END       ';  word[ 6] := 'IF        ';
+    word[ 7] := 'ODD       ';  word[ 8] := 'PROCEDURE ';
+    word[ 9] := 'THEN      ';  word[10] := 'VAR       ';
     word[11] := 'WHILE     ';
-    wsym[ 1] := beginsym;		wsym[ 2] := callsym;
-    wsym[ 3] := constsym;		wsym[ 4] := dosym;
-    wsym[ 5] := endsym;			wsym[ 6] := ifsym;
-    wsym[ 7] := oddsym;			wsym[ 8] := procsym;
-    wsym[ 9] := thensym;		wsym[10] := varsym;
+    wsym[ 1] := beginsym;      wsym[ 2] := callsym;
+    wsym[ 3] := constsym;      wsym[ 4] := dosym;
+    wsym[ 5] := endsym;        wsym[ 6] := ifsym;
+    wsym[ 7] := oddsym;        wsym[ 8] := procsym;
+    wsym[ 9] := thensym;       wsym[10] := varsym;
     wsym[11] := whilesym;
-    ssym['+'] := plus;			ssym['-'] := minus;
-    ssym['*'] := times;			ssym['/'] := slash;
-    ssym['('] := lparen;		ssym[')'] := rparen;
-    ssym['='] := eql;			ssym[','] := comma;
-    ssym['.'] := period;		ssym['≠'] := neq;
-    ssym['<'] := lss;			ssym['>'] := gtr;
-    ssym['≤'] := leq;			ssym['≥'] := geq;
+    ssym['+'] := plus;         ssym['-'] := minus;
+    ssym['*'] := times;        ssym['/'] := slash;
+    ssym['('] := lparen;       ssym[')'] := rparen;
+    ssym['='] := eql;          ssym[','] := comma;
+    ssym['.'] := period;       ssym['≠'] := neq;
+    ssym['<'] := lss;          ssym['>'] := gtr;
+    ssym['≤'] := leq;          ssym['≥'] := geq;
     ssym[';'] := semicolon;
     page(output);
     cc := 0; ll := 0; ch := ' '; kk := al; getsym;
     block (0);
     if sym ≠ period then error (9);
 99: writeln
-end.
+end .
