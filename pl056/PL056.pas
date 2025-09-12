@@ -1,9 +1,9 @@
 {
 From the book Algorithms + Data Structures = Programs, by Niklaus Wirth (1976)
 
-Chapter 5, page 326
+Chapter 5, page 337
 
-Program 5.5 PL/O Parser with Error Recovery
+Program 5.6 PL/O Compiler with Code Generation
 
 OCRed, cleaned, fixed, formatted, converted to modern Free Pascal
 and tested by Daniel Toffetti.
@@ -12,42 +12,64 @@ Formatted with PTop (https://wiki.freepascal.org/PTop)
 
 {$modeSwitch nonlocalgoto+}
 
-program PLO {(input, output)};
-{PL/0 compiler with syntax error recovery}
+program PLO {(input,output)};
+{PL/0 compiler with code generation}
 
 {label 99;}
 
-const norw = 11;  {no. of reserved words}
-    txmax = 100;  {length of identifier table}
-    nmax = 14;    {max. no. of digits in numbers}
-    al = 10;      {length of identifiers}
+const norw = 11;    {no. of reserved words}
+    txmax = 100;    {length of identifier table}
+    nmax = 14;      {max. no. of digits in numbers}
+    al = 10;        {length of identifiers}
+    amax = 2047;    {maximum address}
+    levmax = 3;     {maximum depth of block nesting}
+    cxmax = 200;    {size of code array}
 
 type symbol =
         (nul, ident, number, plus, minus, times, slash, oddsym,
         eql, neq, lss, leq, gtr, geq, lparen, rparen, comma, semicolon,
         period, becomes, beginsym, endsym, ifsym, thensym,
         whilesym, dosym, callsym, constsym, varsym, procsym);
-    alfa = packed array [1..al] of char;
+    alfa = packed array [1 .. al] of char;
     objkind = (constant, variable, proc);
     symset = set of symbol;
+    fct = (lit, opr, lod, sto, cal, int, jmp, jpc); {functions}
+    instruction = packed record
+                    f: fct;          {function code}
+                    l: 0..levmax;    {level}
+                    a: 0..amax;      {displacement address}
+                  end ;
+{   LIT 0,a  :  load constant a
+    OPR 0,a  :  execute operation a
+    LOD l,a  :  load variable l,a
+    STO l,a  :  store variable l,a
+    CAL l,a  :  call procedure a at level l
+    INT 0,a  :  increment t-register by a
+    JMP 0,a  :  jump to a
+    JPC 0,a  :  jump conditional to a      }
 
-var ch: char;     {last character read}
-    sym: symbol;  {last symbol read}
-    id: alfa;     {last identifier read}
-    num: integer; {last number read}
-    cc: integer;  {character count}
-    ll: integer;  {line length}
-    kk: integer;
+var ch: char;           {last character read}
+    sym: symbol;        {last symbol read}
+    id: alfa;           {last identifier read}
+    num: integer;       {last number read}
+    cc: integer;        {character count}
+    ll: integer;        {line length}
+    kk, err: integer;
+    cx: integer;        {code allocation index}
     line: array [1..81] of char;
     a: alfa;
+    code: array [0..cxmax] of instruction;
     word: array [1..norw] of alfa;
     wsym: array [1..norw] of symbol;
     ssym: array [char] of symbol;
+    mnemonic: array [fct] of
+                packed array [1 .. 5] of char;
     declbegsys, statbegsys, facbegsys: symset;
     table: array [0..txmax] of
-              record
-                  name: alfa;
-                  kind: objkind
+              record name: alfa;
+                case kind: objkind of
+                  constant: (val: integer);
+                  variable, proc: (level, adr: integer)
               end ;
 
     inputFile: Text;
@@ -62,7 +84,8 @@ end {cleanExit} ;
 
 procedure error (n: integer);
 begin
-    write (' ':cc, '^', n:2);
+    writeln (' ****', ' ': cc - 1, '↑', n:2);
+    err := err + 1;
     case n of 
          1: writeln (' Use = instead of :=.');
          2: writeln (' = must be followed by a number.');
@@ -89,8 +112,10 @@ begin
         23: writeln (' The preceding factor cannot be followed by this symbol.');
         24: writeln (' An expression cannot begin with this symbol.');
         30: writeln (' This number is too large.');
+        //31: writeln (' .'); // Not included in code or error messages
+        32: writeln (' Only three levels of nesting are supported.')
     end;
-    cleanExit() { goto 99 }
+    // cleanExit() { goto 99 }
 end {error} ;
 
 procedure getsym;
@@ -100,28 +125,28 @@ procedure getsym;
     begin
         if cc = ll then
         begin
-            if eof(inputFile) then
+            if eof(inputfile) then
             begin
-                write ('PROGRAM INCOMPLETE');
+                write(' PROGRAM INCOMPLETE');
                 cleanExit() { goto 99 }
-            end;
+            end ;
             ll := 0;
             cc := 0;
-            write(' ');
+            write(cx:5, ' ');
             while not eoln(inputFile) do
             begin
                 ll := ll + 1;
                 read(inputFile, ch);
                 //write(ch);
                 line[ll] := ch
-            end;
+            end ;
             writeln;
             ll := ll + 1;
             read(inputFile, line[ll])
-        end;
+        end ;
         cc := cc + 1;
         ch := line[cc]
-    end {getch};
+     end {getch} ;
 
 begin {getsym}
     while (ch = ' ') or (ch = chr(10)) or (ch = chr(13)) do
@@ -134,9 +159,9 @@ begin {getsym}
             begin
                 k := k + 1;
                 a[k] := ch
-            end;
+            end ;
             getch
-        until not(ch in ['A'..'Z', '0'..'9']);
+        until not (ch in ['A'..'Z', '0'..'9']);
         if k >= kk then
             kk := k
         else
@@ -154,7 +179,7 @@ begin {getsym}
             if id >= word[k] then
                 i := k + 1
         until i > j;
-        if i - 1 > j then
+        if i-1 > j then
             sym := wsym[k]
         else
             sym := ident
@@ -200,6 +225,23 @@ begin {getsym}
         writeln
 end {getsym} ;
 
+procedure gen(x: fct; y, z: integer);
+begin
+    if cx > cxmax then
+    begin
+        write(' PROGRAM TOO LONG');
+        {goto 99}
+        cleanExit()
+    end ;
+    with code[cx] do
+    begin
+        f := x;
+        l := y;
+        a := z
+    end ;
+    cx := cx + 1
+end {gen} ;
+
 procedure test (s1, s2: symset; n: integer);
 begin
     if not (sym in s1) then
@@ -211,21 +253,43 @@ begin
     end
 end {test} ;
 
-procedure block (tx: integer; fsys: symset);
+procedure block (lev, tx: integer; fsys: symset);
+    var dx,             {data allocation index}
+        tx0,            {initial table index}
+        cx0: integer;   {initial code index}
 
-    procedure enter (k: objkind);
+    procedure enter(k: objkind);
     begin {enter object into table}
         tx := tx + 1;
         with table[tx] do
         begin
             name := id;
             kind := k;
-        end;
+            case k of
+                constant:
+                    begin
+                        if num > amax then
+                        begin
+                            error (30);
+                            num := 0
+                        end ;
+                        val := num
+                    end ;
+                variable:
+                    begin
+                        level := lev;
+                        adr := dx;
+                        dx := dx + 1;
+                    end ;
+                proc:
+                    level := lev
+            end
+        end
     end {enter} ;
 
-    function position (id: alfa): integer;
+    function position(id: alfa): integer;
         var i: integer;
-    begin {find identifier id in table}
+    begin {find indentifier id in table}
         table[0].name := id;
         i := tx;
         while table[i].name <> id do
@@ -241,11 +305,11 @@ procedure block (tx: integer; fsys: symset);
             if sym in [eql, becomes] then
             begin
                 if sym = becomes then
-                    error (1);
+                    error(1);
                 getsym;
                 if sym = number then
                 begin
-                    enter (constant);
+                    enter(constant);
                     getsym
                 end
                 else
@@ -263,97 +327,136 @@ procedure block (tx: integer; fsys: symset);
         if sym = ident then
         begin
             enter (variable);
-            getsym
+                getsym
         end
         else
             error (4)
     end {vardeclaration} ;
 
-    procedure statement (fsys: symset);
+    procedure listcode;
         var i: integer;
+    begin {list code generated for this block}
+        for i := cx0 to cx-1 do
+            with code[i] do
+                writeln(i, mnemonic[f]:5, l:3, a:5)
+    end {listcode} ;
 
-        procedure expression (fsys: symset);
+    procedure statement (fsys: symset);
+        var i, cx1, cx2: integer;
 
-            procedure term (fsys: symset);
+        procedure expression(fsys: symset);
+            var addop: symbol;
+
+            procedure term(fsys: symset);
+                var mulop: symbol;
 
                 procedure factor (fsys: symset);
                     var i: integer;
-
                 begin
-                    test (facbegsys, fsys, 24);
+                    test(facbegsys, fsys, 24);
                     while sym in facbegsys do
                     begin
                         if sym = ident then
-                        begin
-                            i := position (id);
+                        begin i := position(id);
                             if i = 0 then
                                 error (11)
                             else
-                                if table[i].kind = proc then
-                                    error (21);
-                            getsym
+                                with table[i] do
+                                case kind of
+                                    constant: gen(lit, 0, val);
+                                    variable: gen(lod, lev - level, adr);
+                                    proc: error (21)
+                                end ;
+                                getsym
                         end
                         else
                             if sym = number then
                             begin
-                                getsym
+                                if num > amax then
+                                begin
+                                    error (30);
+                                    num := 0
+                                end ;
+                                gen(lit, 0, num); getsym
                             end
                             else
                                 if sym = lparen then
                                 begin
                                     getsym;
-                                    expression ([rparen]+fsys);
-                                // end
-                                // else
+                                    expression([rparen]+fsys);
                                     if sym = rparen then
                                         getsym
                                     else
                                         error (22)
-                        end ;
-                        test(fsys, [lparen], 23)
+                                end ;
+                        test (fsys, [lparen], 23)
                     end
                 end { factor} ;
 
             begin {term}
-                factor (fsys+[times, slash]);
+                factor(fsys+[times, slash]);
                 while sym in [times, slash] do
                 begin
+                    mulop := sym;
                     getsym;
-                    factor(fsys+[times, slash])
+                    factor(fsys+[times, slash]);
+                    if mulop = times then
+                        gen(opr, 0, 4)
+                    else
+                        gen(opr, 0, 5)
                 end
             end {term} ;
 
         begin {expression}
             if sym in [plus, minus] then
             begin
+                addop := sym;
                 getsym;
-                term(fsys+[plus, minus])
+                term(fsys+[plus, minus]);
+                if addop = minus then
+                    gen(opr,0,1)
             end
             else
                 term(fsys+[plus, minus]);
             while sym in [plus, minus] do
             begin
+                addop := sym;
                 getsym;
-                term(fsys+[plus, minus])
+                term(fsys+[plus, minus]);
+                if addop = plus then
+                    gen(opr,0,2)
+                else
+                    gen(opr,0,3)
             end
         end {expression} ;
 
-        procedure condition (fsys: symset);
+        procedure condition(fsys: symset);
+            var relop: symbol;
         begin
             if sym = oddsym then
             begin
                 getsym;
                 expression(fsys);
+                gen(opr,0,6)
             end
             else
             begin
-                expression ([eql, neq, lss, gtr, leq, geq]+fsys);
+                expression([eql, neq, lss, gtr, leq, geq]+fsys);
                 if not (sym in [eql, neq, lss, leq, gtr, geq]) then
                     error (20)
                 else
                 begin
+                    relop := sym;
                     getsym;
-                    expression (fsys)
+                    expression(fsys);
+                    case relop of
+                        eql: gen(opr,0, 8);
+                        neq: gen(opr,0, 9);
+                        lss: gen(opr,0,10);
+                        geq: gen(opr,0,11);
+                        gtr: gen(opr,0,12);
+                        leq: gen(opr,0,13);
+                    end
                 end
             end
         end {condition} ;
@@ -366,48 +469,66 @@ procedure block (tx: integer; fsys: symset);
                 error (11)
             else
                 if table[i].kind <> variable then
+                begin {assignment to non-variable}
                     error (12);
+                    i := 0
+                end ;
             getsym;
             if sym = becomes then
                 getsym
             else
                 error (13);
             expression(fsys);
+            if i <> 0 then
+                with table[i] do
+                    gen(sto, lev - level, adr)
         end
         else
             if sym = callsym then
             begin
                 getsym;
-                if sym <> ident then error (14) else
-                    begin i := position(id);
-                        if i = 0 then error (11) else
-                        if table[i].kind <> proc then error (15);
-                        getsym
-                    end
+                if sym <> ident then
+                    error (14)
+                else
+                begin
+                    i := position(id);
+                    if i = 0 then
+                        error (11)
+                    else
+                        with table[i] do
+                            if kind = proc then
+                                gen (cal, lev-level, adr)
+                            else
+                                error (15);
+                    getsym
+                end
             end
             else
                 if sym = ifsym then
                 begin
                     getsym;
-                    condition ([thensym, dosym]+fsys);
+                    condition([thensym, dosym]+fsys);
                     if sym = thensym then
                         getsym
                     else
                         error (16);
-                    statement(fsys)
+                    cx1 := cx;
+                    gen(jpc,0,0);
+                    statement(fsys);
+                    code[cx1].a := cx
                 end
                 else
                     if sym = beginsym then
                     begin
                         getsym;
-                        statement ([semicolon, endsym]+fsys);
+                        statement([semicolon, endsym]+fsys);
                         while sym in [semicolon]+statbegsys do
                         begin
                             if sym = semicolon then
                                 getsym
                             else
                                 error (10);
-                            statement ([semicolon, endsym]+fsys)
+                            statement([semicolon, endsym]+fsys)
                         end ;
                         if sym = endsym then
                             getsym
@@ -417,18 +538,29 @@ procedure block (tx: integer; fsys: symset);
                     else
                         if sym = whilesym then
                         begin
+                            cx1 := cx;
                             getsym;
-                            condition ([dosym]+fsys);
+                            condition([dosym]+fsys);
+                            cx2 := cx;
+                            gen(jpc,0,0);
                             if sym = dosym then
                                 getsym
                             else
                                 error (18);
                             statement(fsys);
+                            gen(jmp, 0, cx1);
+                            code[cx2].a := cx
                         end ;
         test(fsys, [ ], 19)
-    end {statement} ;
+     end {statement} ;
 
 begin {block}
+    dx := 3;
+    tx0 := tx;
+    table[tx].adr := cx;
+    gen(jmp,0,0);
+    if lev > levmax then
+        error (32);
     repeat
         if sym = constsym then
         begin
@@ -467,7 +599,7 @@ begin {block}
             getsym;
             if sym = ident then
             begin
-                enter (proc);
+                enter(proc);
                 getsym
             end
             else
@@ -476,7 +608,7 @@ begin {block}
                 getsym
             else
                 error (5);
-            block (tx, [semicolon]+fsys);
+            block(lev+1, tx, [semicolon]+fsys);
             if sym = semicolon then
             begin
                 getsym;
@@ -485,11 +617,87 @@ begin {block}
             else
                 error (5)
         end ;
-        test (statbegsys+[ident], declbegsys, 7)
-    until not (sym in declbegsys);
+        test(statbegsys+[ident], declbegsys, 7)
+    until not(sym in declbegsys);
+    code[table[tx0].adr].a := cx;
+    with table[tx0] do
+    begin
+        adr := cx; {start adr of code}
+    end ;
+    cx0 := cx;
+    gen(int, 0, dx);
     statement([semicolon, endsym]+fsys);
+    gen(opr, 0, 0); {return}
     test(fsys, [ ], 8);
+    listcode;
 end {block} ;
+
+procedure interpret;
+    const stacksize = 500;
+    var p, b, t: integer; {program-, base-, topstack-registers}
+        i: instruction; {instruction register}
+        s: array [1..stacksize] of integer; {datastore}
+
+    function base(l: integer): integer;
+        var b1: integer;
+    begin b1 := b; {find base l levels down}
+        while l > 0 do
+            begin b1 := s[b1]; l := l-1
+            end ;
+        base := b1
+     end {base} ;
+
+begin writeln(' START PL/0');
+    t := 0; b := 1; p := 0;
+    s[1] := 0; s[2] := 0; s[3] := 0;
+    repeat i := code[p]; p := p+1;
+        with i do
+        case f of
+            lit: begin t := t+1; s[t]:= a
+                 end ;
+            opr: case a of {operator}
+                 0: begin {return}
+                        t := b-1; p := s[t+3]; b := s[t+2]
+                    end ;
+                 1: s[t] := -s[t];
+                 2: begin t := t-1; s[t] := s[t] + s[t+1]
+                    end ;
+                 3: begin t := t-1; s[t] := s[t] - s[t+1]
+                    end ;
+                 4: begin t := t-1; s[t] := s[t] * s[t+1]
+                    end ;
+                 5: begin t := t-1; s[t] := s[t] div s[t+1]
+                    end ;
+                 6: s[t] := ord(odd(s[t]));
+                 8: begin t := t-1; s[t] := ord(s[t]=s[t+1])
+                    end ;
+                 9: begin t := t-1; s[t] := ord(s[t]<>s[t+1])
+                    end ;
+                10: begin t := t-1; s[t] := ord(s[t]<s[t+1])
+                    end ;
+                11: begin t := t-1; s[t] := ord(s[t]>=s[t+1])
+                    end ;
+                12: begin t := t-1; s[t] := ord(s[t]>s[t+1])
+                    end ;
+                13: begin t := t-1; s[t] := ord(s[t]<=s[t+1])
+                    end ;
+                end ;
+            lod: begin t := t+1; s[t] := s[base(l)+a]
+                 end ;
+            sto: begin s[base(l)+a] := s[t]; writeln(s[t]); t := t-1
+                 end ;
+            cal: begin {generate new block mark}
+                    s[t+1] := base(l); s[t+2] := b; s[t+3] := p;
+                    b := t+l; p := a
+                 end ;
+            int: t := t+a;
+            jmp: p := a;
+            jpc: begin if s[t] = 0 then p := a; t := t-1
+                 end
+        end {with, case}
+    until p = 0;
+    write(' END PL/0');
+end {interpret} ;
 
 begin {main program}
     fileName := ParamStr(1);
@@ -535,18 +743,32 @@ begin {main program}
     ssym['{'] := leq;  { non ASCII "less than or equal symbol" <=, ≤ in the book }
     ssym['}'] := geq;  { non ASCII "greater than or equal symbol" >=, ≥ in the book }
     ssym[';'] := semicolon;
+    mnemonic[lit] := 'LIT';
+    mnemonic[opr] := 'OPR';
+    mnemonic[lod] := 'LOD';
+    mnemonic[sto] := 'STO';
+    mnemonic[cal] := 'CAL';
+    mnemonic[int] := 'INT';
+    mnemonic[jmp] := 'JMP';
+    mnemonic[jpc] := 'JPC';
     declbegsys := [constsym, varsym, procsym];
     statbegsys := [beginsym, callsym, ifsym, whilesym];
     facbegsys := [ident, number, lparen];
     { page(output);  standard library feature of old Pascals to clear screen }
+    err := 0;
     cc := 0;
+    cx := 0;
     ll := 0;
     ch := ' ';
     kk := al;
     getsym;
-    block (0, [period]+declbegsys+statbegsys);
+    block(0, 0, [period]+declbegsys+statbegsys);
     if sym <> period then
         error (9);
+    if err = 0 then
+        interpret
+    else
+        write(' ERRORS IN PL/O PROGRAM');
     {99: writeln}
     cleanExit()
-end.
+end .

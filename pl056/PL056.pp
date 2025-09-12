@@ -64,7 +64,7 @@ var ch: char;           {last character read}
                   variable, procedure: (level, adr: integer)
               end ;
 
-procedure error(n: integer);
+procedure error (n: integer);
 begin writeln(' ****', ' ': cc-1, '↑', n:2); err := err+1
 end {error} ;
 
