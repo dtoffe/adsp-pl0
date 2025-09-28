@@ -1,0 +1,23 @@
+VAR F, N;
+
+PROCEDURE FACT;
+VAR ANS1;
+BEGIN
+    ANS1 := N;
+    N := N - 1;
+    IF N = 0 THEN
+        F := 1;
+    IF N > 0 THEN
+        CALL FACT;
+    F := F * ANS1
+END;
+
+BEGIN
+    N = 10;
+    IF N < 0 THEN
+        F := -1;
+    IF N = 0 THEN
+        F := 1;
+    IF N > 0 THEN
+        CALL FACT
+END.

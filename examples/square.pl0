@@ -1,0 +1,15 @@
+VAR X, SQU;
+
+PROCEDURE SQUARE;
+BEGIN
+   SQU:= X * X
+END;
+
+BEGIN
+   X := 1;
+   WHILE X { 10 DO
+   BEGIN
+      CALL SQUARE;
+      X := X + 1
+   END
+END.

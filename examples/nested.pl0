@@ -1,0 +1,58 @@
+CONST ADD = 1, SUB = 2, MULT = 3, DIV = 4;
+
+VAR OP, X, Y, DONE;
+
+PROCEDURE CALCULATE;
+
+    PROCEDURE ADD;
+    BEGIN
+        X := X + Y
+    END;
+
+    PROCEDURE SUB;
+    BEGIN
+        X := X - Y
+    END;
+
+    PROCEDURE MULT;
+    VAR C;
+    BEGIN
+        X := X * Y
+    END;
+
+    PROCEDURE DIV;
+    BEGIN
+        IF Y # 0 THEN
+            X := X / Y;
+        IF Y = 0 THEN
+            DONE := 1
+    END;
+
+BEGIN
+    IF OP = ADD THEN
+        CALL ADD;
+    IF OP = SUB THEN
+        CALL SUB;
+    IF OP = MULT THEN
+        CALL MULT;
+    IF OP = DIV THEN
+        CALL DIV
+END;
+
+BEGIN
+    DONE := 0;
+    X := 20;
+    WHILE DONE = 0 DO
+    BEGIN
+        OP := 1;
+        IF OP < 1 THEN
+            DONE := 1;
+        IF OP > 4 THEN
+            DONE := 1;
+        IF DONE = 0 THEN
+        BEGIN
+            Y := 4;
+            CALL CALCULATE
+        END
+    END
+END.
