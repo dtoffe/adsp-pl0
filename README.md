@@ -18,12 +18,20 @@ There are three increasingly refined version of the parser:
 - The second one [pl055/PL055.pp](pl055/PL055.pp) is the previous parser with enhanced error detection and recovery.
 - The third one [pl056/PL056.pp](pl056/PL056.pp) adds code generation for the PL0 virtual machine, and the procedure for interpreting that intermediate code.
 
-To compile the examples:
+Then I modified the 5.6 parser so that the compiler and the interpreter are two separated programs, the compiler emit the generated code to a text file, and the interpreter reads that file and executes the code.
 
- `fpc .\pl054\PL054.pas`
+To build the compiler and the interpreter:
+
+ `fpc .\compiler.pas`
+
+ `fpc .\interpreter.pas`
   
 And to run the examples:
 
-`.\pl054\PL054.exe .\examples\mdgdc.pl0`
+`.\compiler.exe .\examples\mdgdc.pl0`
 
-Then I modified the 5.6 parser so that the compiler and the interpreter are two separated programs, the compiler emit the generated code to a text file, and the interpreter reads that file and executes the code.
+Compiles the PL0 program in the file `mdgdc.pl0` and generates the corresponding intermediate code in the file `mdgdc.pcode`.
+
+`.\interpreter.exe .\examples\mdgdc.pcode`
+
+Loads the intermediate code in the file `mdgdc.pcode` and executes (interprets) it.
