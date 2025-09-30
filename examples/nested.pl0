@@ -1,4 +1,4 @@
-CONST ADD = 1, SUB = 2, MULT = 3, DIV = 4;
+CONST ADDOP = 1, SUBOP = 2, MULTOP = 3, DIVOP = 4;
 
 VAR OP, X, Y, DONE;
 
@@ -29,13 +29,13 @@ PROCEDURE CALCULATE;
     END;
 
 BEGIN
-    IF OP = ADD THEN
+    IF OP = ADDOP THEN
         CALL ADD;
-    IF OP = SUB THEN
+    IF OP = SUBOP THEN
         CALL SUB;
-    IF OP = MULT THEN
+    IF OP = MULTOP THEN
         CALL MULT;
-    IF OP = DIV THEN
+    IF OP = DIVOP THEN
         CALL DIV
 END;
 

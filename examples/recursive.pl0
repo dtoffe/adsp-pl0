@@ -13,7 +13,7 @@ BEGIN
 END;
 
 BEGIN
-    N = 10;
+    N := 10;
     IF N < 0 THEN
         F := -1;
     IF N = 0 THEN
