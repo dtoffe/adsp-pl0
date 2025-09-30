@@ -61,7 +61,7 @@ begin
         // Read one line from the file
         readln(inputFile, line);
 
-        if line = ' ' then
+        if (line = '') or (line = ' ') then
             continue;
 
         // Extract the index first (up to the first non-digit)
@@ -128,6 +128,7 @@ begin writeln(' START PL/0');
     s[1] := 0; s[2] := 0; s[3] := 0;
     repeat
         i := code[p];
+        writeln(i.f, ' ', i.l, ' ', i.a);
         p := p + 1;
         with i do
         case f of

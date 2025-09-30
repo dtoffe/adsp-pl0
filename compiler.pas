@@ -84,6 +84,7 @@ var ch: char;           {last character read}
 
     inputFile, outputFile: Text;
     inputFileName, outputFileName: string;
+    i: integer;
 
 procedure cleanExit;
 begin
@@ -349,8 +350,7 @@ procedure block (lev, tx: integer; fsys: symset);
     begin {list code generated for this block}
         for i := cx0 to cx-1 do
             with code[i] do
-                writeln(outputFile, i, mnemonic[f]:5, l:3, a:5);
-        writeln(outputFile, ' ');
+                writeln(i, mnemonic[f]:5, l:3, a:5);
     end {listcode} ;
 
     procedure statement (fsys: symset);
@@ -650,7 +650,7 @@ begin {main program}
     Reset(inputFile);
 
     outputFileName := ChangeFileExt(inputFileName, '.pcode');
-    outputFileName := ExtractFileName(outputFileName);
+    //outputFileName := ExtractFileName(outputFileName);
     Assign(outputFile, outputFileName);
     Rewrite(outputFile);
     
@@ -717,7 +717,12 @@ begin {main program}
     if sym <> period then
         error (9);
     if err = 0 then
-        write(' PL/O PROGRAM COMPILED SUCCESSFULLY')
+    begin
+        write(' PL/O PROGRAM COMPILED SUCCESSFULLY');
+        for i := 0 to cxmax do
+            with code[i] do
+                writeln(outputFile, i, mnemonic[f]:5, l:3, a:5);
+    end
     else
         write(' ERRORS IN PL/O PROGRAM');
     {99: writeln}
