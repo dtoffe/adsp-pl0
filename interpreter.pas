@@ -167,7 +167,7 @@ begin writeln(' START PL/0');
                  end ;
             cal: begin {generate new block mark}
                     s[t+1] := base(l); s[t+2] := b; s[t+3] := p;
-                    b := t+l; p := a
+                    b := t+1; p := a
                  end ;
             int: t := t+a;
             jmp: p := a;

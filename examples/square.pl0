@@ -2,7 +2,7 @@ VAR X, SQU;
 
 PROCEDURE SQUARE;
 BEGIN
-   SQU:= X * X
+   SQU := X * X
 END;
 
 BEGIN

@@ -339,7 +339,7 @@ procedure block (lev, tx: integer; fsys: symset);
         if sym = ident then
         begin
             enter (variable);
-                getsym
+            getsym
         end
         else
             error (4)
